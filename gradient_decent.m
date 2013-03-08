@@ -84,11 +84,11 @@ function [fs,ts,xs]=gradient_decent(options)
 
     ts=zeros(max_iter,1);
     fs=zeros(max_iter,1);
-    xs=zeros(max_iter,n);
+    xs=zeros(n,max_iter);
     j=1;
     ts(j)=0;
     fs(j)=fx;
-    xs(j,:)=x;
+    xs(:,j)=x;
     t=1;
     
     bt_iter_max=30;
@@ -216,11 +216,11 @@ function [fs,ts,xs]=gradient_decent(options)
         end
         ts(j)=t;
         fs(j)=fx;
-        xs(j,:)=x;
+        xs(:,j)=x;
     end
     ts=ts(1:j);
     fs=fs(1:j);
-    xs=xs(1:j,:);
+    xs=xs(:,1:j);
 
 end
 
