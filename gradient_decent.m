@@ -47,6 +47,12 @@ function [fs,ts,xs]=gradient_decent(options)
     if ~isfield(options,'output_prefix')
         options.output_prefix='';
     end
+    if ~isfield(options,'print_line_search')
+        options.print_line_search=0;
+    end
+    if ~isfield(options,'printEvery')
+        options.printEvery=20;
+    end
     if ~isfield(options,'override_convexity_check')
         options.override_convexity_check=0;
     end
@@ -90,10 +96,10 @@ function [fs,ts,xs]=gradient_decent(options)
     fs(j)=fx;
     xs(:,j)=x;
     t=1;
-    
+    fx_old=fx;
     bt_iter_max=30;
     while notDone
-        disp('*** Computing Gradient ****')        
+%         disp('*** Computing Gradient ****')        
         if options.save_gradient_components==1
             [g,g_components]=df(x);            
             fname=sprintf('%sgradient_comp_%03d',options.output_prefix,j);
@@ -106,9 +112,11 @@ function [fs,ts,xs]=gradient_decent(options)
         if options.bt_linesearch
            
             t=t*2;
-            disp('|-----------|------------------|--------|--|----|')
-            disp('| f(x+t*dx) |fx + alpha*t*gt*dx|    t   | k|  j |')
-            disp('|-----------|------------------|--------|--|----|')
+            if options.print_line_search
+                disp('|-----------|------------------|--------|--|----|')
+                disp('| f(x+t*dx) |fx + alpha*t*gt*dx|    t   | k|  j |')
+                disp('|-----------|------------------|--------|--|----|')
+            end
             
             f_btls=zeros(bt_iter_max,1); % f for backtracking linesearch
             t_btls=zeros(bt_iter_max,1); % t for backtracking linesearch
@@ -130,7 +138,7 @@ function [fs,ts,xs]=gradient_decent(options)
             k=2;
             
             % backtracking line search
-            str=sprintf('| %10.4f|        %10.4f|%8.2e|%2d|%4d|',fx2,  fx3, t, k ,j);
+           % str=sprintf('| %10.4f|        %10.4f|%8.2e|%2d|%4d|',fx2,  fx3, t, k ,j);
             
 
             % increase t until btls condition fails
@@ -138,11 +146,13 @@ function [fs,ts,xs]=gradient_decent(options)
                 t=t*2;
                 fx2=f(x+t*dx);
                 fx3=fx + alpha*t*g'*dx;
-                str=sprintf('| %10.4f|        %10.4f|%8.2e|%2d|%4d|',fx2,  fx3, t, k ,j);
-                disp(str)
+                if options.print_line_search
+                    str=sprintf('| %10.4f|        %10.4f|%8.2e|%2d|%4d|',fx2,  fx3, t, k ,j);
+                    disp(str)
+                end
             end
             
-            disp(str)
+           % disp(str)
             k=2;
             while (fx2 > fx3 || isnan(fx2) || isinf(fx2) ) && k<bt_iter_max
                 k=k+1;
@@ -153,8 +163,10 @@ function [fs,ts,xs]=gradient_decent(options)
                 fx3=fx + alpha*t*g'*dx;
                 f_btls(k)=fx2;
                 t_btls(k)=t;
-                str=sprintf('| %10.4f|        %10.4f|%8.2e|%2d|%4d|',fx2,  fx3, t, k ,j);
-                disp(str)
+                if options.print_line_search
+                    str=sprintf('| %10.4f|        %10.4f|%8.2e|%2d|%4d|',fx2,  fx3, t, k ,j);
+                    disp(str)
+                end
             end
             if options.plot_bt_linesearch || options.save_bt_linesearch
                 t_btls=t_btls(1:k);
@@ -210,19 +222,30 @@ function [fs,ts,xs]=gradient_decent(options)
         end
         
         x=x+t*dx;
+        fx_old=fx;
         fx=f(x);
-        if -g'*dx < threshold || j==max_iter
+        prec=-g'*dx;
+        if prec < threshold || j==max_iter
             notDone=false;
         end
         ts(j)=t;
         fs(j)=fx;
         xs(:,j)=x;
+        
+        if mod(j,options.printEvery)==0 || ~notDone
+            str=sprintf('Iter:%5d, f:%10f, df:%10f, g''*dx:%10f, step:%10f',j,fx,fx_old-fx,prec,t);
+            disp(str)
+        end
     end
     ts=ts(1:j);
     fs=fs(1:j);
     xs=xs(:,1:j);
+    if  j==max_iter
+        disp('Finished: Iteration limit reached')
+    else
+        disp('Finished: Tolerance reached')
+    end
 
-end
 
 
 function [f,t]=line_search(options,x,dx,fx,t2,fx2,t3,fx3,j)
@@ -325,4 +348,5 @@ else
 %     t=t;
 end
 
+end
 end
